@@ -93,6 +93,15 @@ _FORWARD_DISPLAY := $(shell \
 DISPLAY_DOCKER_ARG := $(if $(filter true,$(_FORWARD_DISPLAY)),-e DISPLAY=$(DISPLAY),)
 X11_UNIX_MOUNT     := $(if $(filter true,$(_FORWARD_DISPLAY)),$(if $(wildcard /tmp/.X11-unix),-v /tmp/.X11-unix:/tmp/.X11-unix,),)
 
+# Forward host audio to GUI applications running in the CLI container. 
+_HOST_RUNTIME_DIR := /run/user/$(USER_UID)
+_HOST_PULSE_DIR   := $(_HOST_RUNTIME_DIR)/pulse
+_HOST_PULSE_SOCKET := $(_HOST_PULSE_DIR)/native
+_HOST_AUDIO_GID   := $(shell stat -c '%g' /dev/snd/controlC0 2>/dev/null)
+
+PULSE_AUDIO_DOCKER_ARGS := $(if $(wildcard $(_HOST_PULSE_SOCKET)),-e XDG_RUNTIME_DIR=$(_HOST_RUNTIME_DIR) -e PULSE_SERVER=unix:$(_HOST_PULSE_SOCKET) -v $(_HOST_PULSE_DIR):$(_HOST_PULSE_DIR),)
+ALSA_AUDIO_DOCKER_ARGS  := $(if $(wildcard /dev/snd),--device /dev/snd $(if $(_HOST_AUDIO_GID),--group-add $(_HOST_AUDIO_GID),),)
+
 # === IMAGE TAGS ===
 # core:  tied to the adore_cli commit (changes when ROS layer or core packages change)
 # base:  tied to adore_cli commit (changes when dev tools change)
@@ -471,6 +480,8 @@ adore_cli_start:
 	    -e UID=${USER_UID} \
 	    -e GID=${USER_GID} \
 	    ${DISPLAY_DOCKER_ARG} \
+	    ${PULSE_AUDIO_DOCKER_ARGS} \
+	    ${ALSA_AUDIO_DOCKER_ARGS} \
 	    -e ROS_DISTRO=${ROS_DISTRO} \
 	    -e HISTFILE=/tmp/adore_cli/.zsh_history \
 	    -e ADORE_CLI_WORKING_DIRECTORY=${ADORE_CLI_WORKING_DIRECTORY} \
