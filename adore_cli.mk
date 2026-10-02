@@ -97,9 +97,10 @@ X11_UNIX_MOUNT     := $(if $(filter true,$(_FORWARD_DISPLAY)),$(if $(wildcard /t
 _HOST_RUNTIME_DIR := /run/user/$(USER_UID)
 _HOST_PULSE_DIR   := $(_HOST_RUNTIME_DIR)/pulse
 _HOST_PULSE_SOCKET := $(_HOST_PULSE_DIR)/native
+_CONTAINER_PULSE_DIR := /tmp/host-pulse
 _HOST_AUDIO_GID   := $(shell stat -c '%g' /dev/snd/controlC0 2>/dev/null)
 
-PULSE_AUDIO_DOCKER_ARGS := $(if $(wildcard $(_HOST_PULSE_SOCKET)),-e XDG_RUNTIME_DIR=$(_HOST_RUNTIME_DIR) -e PULSE_SERVER=unix:$(_HOST_PULSE_SOCKET) -v $(_HOST_PULSE_DIR):$(_HOST_PULSE_DIR),)
+PULSE_AUDIO_DOCKER_ARGS := $(if $(wildcard $(_HOST_PULSE_SOCKET)),-e PULSE_SERVER=unix:$(_CONTAINER_PULSE_DIR)/native -v $(_HOST_PULSE_DIR):$(_CONTAINER_PULSE_DIR):ro,)
 ALSA_AUDIO_DOCKER_ARGS  := $(if $(wildcard /dev/snd),--device /dev/snd $(if $(_HOST_AUDIO_GID),--group-add $(_HOST_AUDIO_GID),),)
 
 # === IMAGE TAGS ===
